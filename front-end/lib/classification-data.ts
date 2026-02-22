@@ -1,256 +1,146 @@
-// ─── Customer profile used as model input ─────────────────────────────────────
+// ─── Types matching the real ML API response ─────────────────────────────────
 
-export interface CustomerProfile {
-  id: string
+export interface FeatureExplanation {
+  feature: string
+  shap_value: number
+}
+
+export interface SinglePredictionResult {
+  predicted_bundle: string
+  predicted_index: number
+  confidence: number                             // 0–100
+  class_probabilities: Record<string, number>    // class → probability (0–100)
+  feature_explanations: FeatureExplanation[]
+  base_value: number
+}
+
+export interface BatchPredictionRow {
+  row_index: number
+  user_id: string
+  predicted_bundle: string
+  confidence: number
+  class_probabilities: Record<string, number>
+}
+
+export interface BatchPredictionResult {
+  total_rows: number
+  predictions: BatchPredictionRow[]
+  summary: {
+    bundle_distribution: Record<string, number>
+    avg_confidence: number
+    min_confidence: number
+    max_confidence: number
+  }
+  global_importances?: Record<string, number>
+}
+
+// ─── Single prediction input (raw column values for train.csv schema) ────────
+
+export interface SinglePredictionInput {
+  User_ID: string
+  Policy_Cancelled_Post_Purchase: number
+  Policy_Start_Year: number
+  Policy_Start_Week: number
+  Policy_Start_Day: number
+  Grace_Period_Extensions: number
+  Previous_Policy_Duration_Months: number
+  Adult_Dependents: number
+  Child_Dependents: number | null
+  Infant_Dependents: number
+  Region_Code: string
+  Existing_Policyholder: number
+  Previous_Claims_Filed: number
+  Years_Without_Claims: number
+  Policy_Amendments_Count: number
+  Broker_ID: number | null
+  Employer_ID: number | null
+  Underwriting_Processing_Days: number
+  Vehicles_on_Policy: number
+  Custom_Riders_Requested: number
+  Broker_Agency_Type: string
+  Deductible_Tier: string
+  Acquisition_Channel: string
+  Payment_Schedule: string
+  Employment_Status: string
+  Estimated_Annual_Income: number
+  Days_Since_Quote: number
+  Policy_Start_Month: string
+}
+
+// ─── Bundle display metadata ─────────────────────────────────────────────────
+
+export interface BundleDisplayInfo {
   name: string
-  age: number
-  gender: 'Male' | 'Female' | 'Other'
-  maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed'
-  annualIncome: number
-  employmentStatus: 'Employed' | 'Self-Employed' | 'Unemployed' | 'Retired'
-  numDependents: number
-  educationLevel: 'High School' | "Bachelor's" | "Master's" | 'PhD'
-  propertyOwnership: 'Renter' | 'Homeowner'
-  vehicleType: 'None' | 'Sedan' | 'SUV' | 'Truck' | 'Luxury'
-  priorClaimsCount: number
-  region: 'North' | 'South' | 'East' | 'West'
+  color: string
+  icon: string
 }
 
-// ─── Classification output ─────────────────────────────────────────────────────
-
-export interface PredictionResult {
-  predictedBundle: number                   // 0–9
-  confidence: number                        // 0–100
-  classProbabilities: number[]              // length 10, values 0–100
-  bundleInfo: BundleInfo
+export const BUNDLE_DISPLAY: Record<string, BundleDisplayInfo> = {
+  Auto_Comprehensive:    { name: 'Auto Comprehensive',    color: '#3b82f6', icon: '🚗' },
+  Auto_Liability_Basic:  { name: 'Auto Liability Basic',  color: '#6366f1', icon: '🛡️' },
+  Basic_Health:          { name: 'Basic Health',           color: '#10b981', icon: '💊' },
+  Family_Comprehensive:  { name: 'Family Comprehensive',  color: '#8b5cf6', icon: '👨‍👩‍👧‍👦' },
+  Health_Dental_Vision:  { name: 'Health Dental Vision',   color: '#14b8a6', icon: '🦷' },
+  Home_Premium:          { name: 'Home Premium',           color: '#f59e0b', icon: '🏠' },
+  Home_Standard:         { name: 'Home Standard',          color: '#f97316', icon: '🏡' },
+  Premium_Health_Life:   { name: 'Premium Health + Life',  color: '#ec4899', icon: '❤️' },
+  Renter_Basic:          { name: 'Renter Basic',           color: '#64748b', icon: '🏢' },
+  Renter_Premium:        { name: 'Renter Premium',         color: '#06b6d4', icon: '🏙️' },
 }
 
-// ─── Bundle catalogue ──────────────────────────────────────────────────────────
-
-export interface BundleInfo {
-  id: number
-  name: string
-  tier: 'Basic' | 'Standard' | 'Premium' | 'Enterprise'
-  description: string
-  typicalProfile: string
-  coverages: string[]
-  monthlyPremiumRange: [number, number]     // [min, max] in USD
-  color: string                             // Tailwind color token for accents
-}
-
-export const BUNDLE_INFO: BundleInfo[] = [
-  {
-    id: 0,
-    name: 'Liability Only',
-    tier: 'Basic',
-    description: 'Minimum legally required coverage — ideal for low-risk, cost-aware customers.',
-    typicalProfile: 'Young renter, entry-level income, no dependents',
-    coverages: ['Third-Party Liability'],
-    monthlyPremiumRange: [18, 35],
-    color: 'slate',
-  },
-  {
-    id: 1,
-    name: 'Essential Auto',
-    tier: 'Basic',
-    description: 'Core personal auto protection covering own-damage and liability.',
-    typicalProfile: 'Single driver, moderate income, urban area',
-    coverages: ['Auto Liability', 'Collision', 'Uninsured Motorist'],
-    monthlyPremiumRange: [45, 80],
-    color: 'blue',
-  },
-  {
-    id: 2,
-    name: 'Home + Auto Starter',
-    tier: 'Standard',
-    description: 'Entry-level bundled home and auto — popular with first-time homeowners.',
-    typicalProfile: 'Married couple, new homeowner, one vehicle',
-    coverages: ['Dwelling Protection', 'Auto Liability', 'Collision', 'Personal Property'],
-    monthlyPremiumRange: [95, 150],
-    color: 'cyan',
-  },
-  {
-    id: 3,
-    name: 'Comprehensive Home',
-    tier: 'Standard',
-    description: 'Broad home coverage with liability extension — no auto component.',
-    typicalProfile: 'Homeowner, low vehicle usage, suburban',
-    coverages: ['Dwelling Protection', 'Personal Liability', 'Loss of Use', 'Personal Property'],
-    monthlyPremiumRange: [85, 140],
-    color: 'teal',
-  },
-  {
-    id: 4,
-    name: 'Life + Health Basic',
-    tier: 'Standard',
-    description: 'Term life and basic health coverage packaged for individuals and small families.',
-    typicalProfile: 'Married with dependents, age 30–45, employee benefits gap',
-    coverages: ['Term Life ($250k)', 'Major Medical', 'Prescription Coverage'],
-    monthlyPremiumRange: [110, 190],
-    color: 'violet',
-  },
-  {
-    id: 5,
-    name: 'Full Auto + Home',
-    tier: 'Premium',
-    description: 'Comprehensive bundled coverage for property and vehicles with roadside assistance.',
-    typicalProfile: 'Homeowner with 2 vehicles, families, mid-to-high income',
-    coverages: ['Full Collision & Comp', 'Dwelling + Contents', 'Roadside Assist', 'Rental Reimbursement'],
-    monthlyPremiumRange: [180, 280],
-    color: 'indigo',
-  },
-  {
-    id: 6,
-    name: 'Business Protection Basic',
-    tier: 'Standard',
-    description: 'Starter commercial coverage for small business owners and freelancers.',
-    typicalProfile: 'Self-employed, 1–10 employees, home-based or small office',
-    coverages: ['General Liability', 'BOP Property', 'Professional Liability'],
-    monthlyPremiumRange: [160, 260],
-    color: 'amber',
-  },
-  {
-    id: 7,
-    name: 'Premium All-Coverage',
-    tier: 'Premium',
-    description: 'Holistic personal protection: home, auto, life, and health in one plan.',
-    typicalProfile: 'High-income family, homeowner, multiple vehicles',
-    coverages: ['Full Auto', 'Home Comprehensive', 'Term Life ($500k)', 'Major Medical', 'Umbrella Liability'],
-    monthlyPremiumRange: [320, 480],
-    color: 'purple',
-  },
-  {
-    id: 8,
-    name: 'Enterprise Protection Suite',
-    tier: 'Enterprise',
-    description: 'Mid-to-large business coverage with cyber, D&O, and commercial property.',
-    typicalProfile: 'Business owner 10–100 employees, high-value assets',
-    coverages: ['Commercial General Liability', 'Directors & Officers', 'Cyber Liability', 'Commercial Property', 'Workers Comp'],
-    monthlyPremiumRange: [500, 900],
-    color: 'rose',
-  },
-  {
-    id: 9,
-    name: 'Ultra-Premium Complete',
-    tier: 'Enterprise',
-    description: 'Market-leading blanket coverage for high-net-worth individuals and large enterprises.',
-    typicalProfile: 'Ultra-high-net-worth individual or Fortune-500-adjacent business',
-    coverages: ['Whole Life ($2M+)', 'Excess Liability', 'Fine Art & Collectibles', 'Private Aviation', 'Global Health', 'Commercial Fleet'],
-    monthlyPremiumRange: [1200, 3500],
-    color: 'emerald',
-  },
+export const CLASS_ORDER = [
+  'Auto_Comprehensive',
+  'Auto_Liability_Basic',
+  'Basic_Health',
+  'Family_Comprehensive',
+  'Health_Dental_Vision',
+  'Home_Premium',
+  'Home_Standard',
+  'Premium_Health_Life',
+  'Renter_Basic',
+  'Renter_Premium',
 ]
 
-// ─── Sample customer profiles for demo ────────────────────────────────────────
+// Dropdown options matching train.csv categorical values
+export const CATEGORICAL_OPTIONS = {
+  Region_Code: ['USA', 'GBR', 'FRA', 'DEU', 'ESP', 'ITA', 'AUS', 'BRA', 'IND', 'CHN', 'JPN', 'KOR', 'AUT', 'PRT', 'IRL', 'BEL', 'COL', 'ECU', 'SWE', 'AGO', 'NLD', 'DNK', 'MAR', 'CHE', 'ARG', 'CHL'],
+  Broker_Agency_Type: ['Urban_Boutique', 'National_Corporate'],
+  Deductible_Tier: ['Tier_1_High_Ded', 'Tier_2_Mid_Ded', 'Tier_3_Low_Ded', 'Tier_4_Zero_Ded'],
+  Acquisition_Channel: ['Direct_Website', 'Aggregator_Site', 'Local_Broker', 'Corporate_Partner', 'Affiliate_Group'],
+  Payment_Schedule: ['Monthly_EFT', 'Annual_Upfront', 'Quarterly_Invoice'],
+  Employment_Status: ['Employed_FullTime', 'Self_Employed', 'Contractor', 'Unemployed'],
+  Policy_Start_Month: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+}
 
-export const SAMPLE_CUSTOMERS: CustomerProfile[] = [
-  {
-    id: 'c1',
-    name: 'Alex Rivera',
-    age: 28,
-    gender: 'Male',
-    maritalStatus: 'Single',
-    annualIncome: 48000,
-    employmentStatus: 'Employed',
-    numDependents: 0,
-    educationLevel: "Bachelor's",
-    propertyOwnership: 'Renter',
-    vehicleType: 'Sedan',
-    priorClaimsCount: 0,
-    region: 'West',
-  },
-  {
-    id: 'c2',
-    name: 'Sarah Chen',
-    age: 38,
-    gender: 'Female',
-    maritalStatus: 'Married',
-    annualIncome: 112000,
-    employmentStatus: 'Employed',
-    numDependents: 2,
-    educationLevel: "Master's",
-    propertyOwnership: 'Homeowner',
-    vehicleType: 'SUV',
-    priorClaimsCount: 1,
-    region: 'East',
-  },
-  {
-    id: 'c3',
-    name: 'Marcus Johnson',
-    age: 52,
-    gender: 'Male',
-    maritalStatus: 'Married',
-    annualIncome: 240000,
-    employmentStatus: 'Self-Employed',
-    numDependents: 3,
-    educationLevel: "Master's",
-    propertyOwnership: 'Homeowner',
-    vehicleType: 'Luxury',
-    priorClaimsCount: 2,
-    region: 'South',
-  },
-  {
-    id: 'c4',
-    name: 'Priya Patel',
-    age: 44,
-    gender: 'Female',
-    maritalStatus: 'Divorced',
-    annualIncome: 78000,
-    employmentStatus: 'Employed',
-    numDependents: 1,
-    educationLevel: "Bachelor's",
-    propertyOwnership: 'Homeowner',
-    vehicleType: 'Sedan',
-    priorClaimsCount: 0,
-    region: 'North',
-  },
-]
-
-// ─── Deterministic mock prediction engine ─────────────────────────────────────
-// In production this calls your ML model API endpoint.
-
-export function predictBundle(customer: CustomerProfile): PredictionResult {
-  // Heuristic scoring per bundle (sum → normalize to probabilities)
-  const raw = Array(10).fill(0) as number[]
-
-  // Rough feature-driven signal
-  const incomeScore = Math.log10(Math.max(customer.annualIncome, 1000)) / Math.log10(300000)
-  const ageScore = customer.age / 65
-  const dependentsBoost = customer.numDependents > 0 ? 1.2 : 1.0
-  const isHomeowner = customer.propertyOwnership === 'Homeowner'
-  const hasCar = customer.vehicleType !== 'None'
-  const isBusiness = customer.employmentStatus === 'Self-Employed'
-  const isHighIncome = customer.annualIncome > 150000
-  const isVeryHighIncome = customer.annualIncome > 300000
-
-  raw[0] += (1 - incomeScore) * 2 + (customer.priorClaimsCount === 0 ? 0.5 : 0)
-  raw[1] += hasCar ? 1.5 * (1 - incomeScore * 0.5) : 0
-  raw[2] += isHomeowner && hasCar && !isHighIncome ? 2.0 * dependentsBoost : 0
-  raw[3] += isHomeowner && !hasCar ? 1.8 : 0
-  raw[4] += customer.numDependents >= 1 && ageScore > 0.4 && ageScore < 0.75 ? 2.0 : 0
-  raw[5] += isHomeowner && hasCar && incomeScore > 0.5 ? 2.5 * dependentsBoost : 0
-  raw[6] += isBusiness && !isHighIncome ? 2.2 : 0
-  raw[7] += isHighIncome && isHomeowner && hasCar ? 2.8 * (customer.numDependents > 0 ? 1.3 : 1.0) : 0
-  raw[8] += isBusiness && isHighIncome ? 2.5 : 0
-  raw[9] += isVeryHighIncome ? 3.0 : 0
-
-  // Add slight noise for realism
-  const noisy = raw.map((v, i) => Math.max(0.05, v + (i % 3 === 0 ? 0.1 : 0.05)))
-
-  const total = noisy.reduce((a, b) => a + b, 0)
-  const probabilities = noisy.map((v) => Math.round((v / total) * 100))
-
-  // Fix rounding so sum = 100
-  const sum = probabilities.reduce((a, b) => a + b, 0)
-  probabilities[probabilities.indexOf(Math.max(...probabilities))] += 100 - sum
-
-  const predictedBundle = probabilities.indexOf(Math.max(...probabilities))
-  const confidence = probabilities[predictedBundle]
-
+export function getDefaultSingleInput(): SinglePredictionInput {
   return {
-    predictedBundle,
-    confidence,
-    classProbabilities: probabilities,
-    bundleInfo: BUNDLE_INFO[predictedBundle],
+    User_ID: 'SINGLE_INPUT',
+    Policy_Cancelled_Post_Purchase: 0,
+    Policy_Start_Year: 2024,
+    Policy_Start_Week: 1,
+    Policy_Start_Day: 1,
+    Grace_Period_Extensions: 0,
+    Previous_Policy_Duration_Months: 12,
+    Adult_Dependents: 1,
+    Child_Dependents: 0,
+    Infant_Dependents: 0,
+    Region_Code: 'USA',
+    Existing_Policyholder: 0,
+    Previous_Claims_Filed: 0,
+    Years_Without_Claims: 2,
+    Policy_Amendments_Count: 0,
+    Broker_ID: null,
+    Employer_ID: null,
+    Underwriting_Processing_Days: 5,
+    Vehicles_on_Policy: 1,
+    Custom_Riders_Requested: 0,
+    Broker_Agency_Type: 'Urban_Boutique',
+    Deductible_Tier: 'Tier_2_Mid_Ded',
+    Acquisition_Channel: 'Direct_Website',
+    Payment_Schedule: 'Monthly_EFT',
+    Employment_Status: 'Employed_FullTime',
+    Estimated_Annual_Income: 60000,
+    Days_Since_Quote: 14,
+    Policy_Start_Month: 'January',
   }
 }

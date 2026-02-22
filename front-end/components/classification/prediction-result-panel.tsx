@@ -3,19 +3,16 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Award, ShieldCheck } from 'lucide-react'
-import { PredictionResult } from '@/lib/classification-data'
+import { SinglePredictionResult, BUNDLE_DISPLAY } from '@/lib/classification-data'
 import { ProbabilityDistribution } from './probability-distribution'
+import { ShapWaterfallChart } from './shap-waterfall-chart'
+import { GlobalFeatureImportance, type FeatureImportanceEntry } from './global-feature-importance'
 
 interface PredictionResultPanelProps {
-  result: PredictionResult | null
+  result: SinglePredictionResult | null
   isLoading?: boolean
-}
-
-const TIER_COLOR: Record<string, string> = {
-  Basic: 'text-slate-400 bg-slate-400/10 border-slate-400/30',
-  Standard: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
-  Premium: 'text-purple-400 bg-purple-400/10 border-purple-400/30',
-  Enterprise: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30',
+  /** Model-level feature importances (from /metadata endpoint) */
+  globalImportances?: FeatureImportanceEntry[]
 }
 
 const CONFIDENCE_COLOR = (c: number) => {
@@ -23,8 +20,13 @@ const CONFIDENCE_COLOR = (c: number) => {
   if (c >= 60) return 'text-amber-500'
   return 'text-rose-500'
 }
+const CONFIDENCE_BG = (c: number) => {
+  if (c >= 80) return 'bg-emerald-500'
+  if (c >= 60) return 'bg-amber-500'
+  return 'bg-rose-500'
+}
 
-export function PredictionResultPanel({ result, isLoading }: PredictionResultPanelProps) {
+export function PredictionResultPanel({ result, isLoading, globalImportances }: PredictionResultPanelProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -33,7 +35,7 @@ export function PredictionResultPanel({ result, isLoading }: PredictionResultPan
           transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
           className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full"
         />
-        <p className="text-sm text-muted-foreground">Running classification model…</p>
+        <p className="text-sm text-muted-foreground">Running ML pipeline…</p>
       </div>
     )
   }
@@ -42,97 +44,68 @@ export function PredictionResultPanel({ result, isLoading }: PredictionResultPan
     return (
       <div className="flex flex-col items-center justify-center h-full text-center gap-3">
         <ShieldCheck className="w-12 h-12 text-muted-foreground/30" />
-        <p className="text-muted-foreground text-sm">Submit a customer profile to predict their coverage bundle</p>
+        <p className="text-muted-foreground text-sm">Submit a client profile to predict their coverage bundle</p>
       </div>
     )
   }
 
-  const { bundleInfo, predictedBundle, confidence, classProbabilities } = result
+  const { predicted_bundle, confidence, class_probabilities, feature_explanations } = result
+  const display = BUNDLE_DISPLAY[predicted_bundle] ?? { name: predicted_bundle, color: '#6366f1', icon: '📋' }
 
   return (
     <motion.div
-      key={predictedBundle}
+      key={predicted_bundle}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="h-full flex flex-col gap-6 overflow-y-auto"
+      className="flex flex-col gap-5 overflow-y-auto"
     >
-      {/* Predicted bundle hero */}
-      <motion.div
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex items-center gap-5"
-      >
-        {/* Big number */}
-        <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-          <span className="text-4xl font-extrabold text-primary">{predictedBundle}</span>
+      {/* ── Hero card ── */}
+      <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="rounded-xl p-5 flex items-center gap-4" style={{ background: `${display.color}10`, border: `1px solid ${display.color}33` }}>
+        <div className="flex-shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center text-3xl" style={{ background: `${display.color}20`, border: `1px solid ${display.color}44` }}>
+          {display.icon}
         </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Award className="w-4 h-4 text-primary" />
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Predicted Bundle</span>
+            <Award className="w-4 h-4" style={{ color: display.color }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: display.color }}>Predicted Bundle</span>
           </div>
-          <h3 className="text-xl font-bold text-foreground leading-tight">{bundleInfo.name}</h3>
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${TIER_COLOR[bundleInfo.tier]}`}>
-              {bundleInfo.tier}
-            </span>
-            <span className={`text-sm font-bold ${CONFIDENCE_COLOR(confidence)}`}>
-              {confidence}% confidence
-            </span>
-          </div>
+          <h3 className="text-xl font-bold text-foreground leading-tight">{display.name}</h3>
+          <span className={`text-sm font-bold ${CONFIDENCE_COLOR(confidence)}`}>{confidence.toFixed(1)}% confidence</span>
         </div>
       </motion.div>
 
-      {/* Confidence meter */}
+      {/* ── Confidence meter ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Model Confidence</span>
-          <span className={`text-sm font-bold ${CONFIDENCE_COLOR(confidence)}`}>{confidence}%</span>
+          <span className={`text-sm font-bold ${CONFIDENCE_COLOR(confidence)}`}>{confidence.toFixed(1)}%</span>
         </div>
         <div className="w-full h-2.5 bg-muted/30 rounded-full overflow-hidden">
-          <motion.div
-            className={`h-full rounded-full ${confidence >= 80 ? 'bg-emerald-500' : confidence >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${confidence}%` }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-          />
+          <motion.div className={`h-full rounded-full ${CONFIDENCE_BG(confidence)}`} initial={{ width: 0 }} animate={{ width: `${confidence}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} />
         </div>
       </div>
 
-      {/* Bundle detail */}
-      <div className="bg-muted/20 border border-border rounded-xl p-5 space-y-4">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Description</p>
-          <p className="text-sm text-foreground leading-relaxed">{bundleInfo.description}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Typical Customer</p>
-          <p className="text-sm text-muted-foreground">{bundleInfo.typicalProfile}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Included Coverages</p>
-          <div className="flex flex-wrap gap-2">
-            {bundleInfo.coverages.map((cov) => (
-              <span key={cov} className="text-xs px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
-                {cov}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Est. Monthly Premium</p>
-          <p className="text-sm font-bold text-emerald-500">
-            ${bundleInfo.monthlyPremiumRange[0]} – ${bundleInfo.monthlyPremiumRange[1]}
-          </p>
-        </div>
-      </div>
+      {/* ── SHAP Waterfall ── */}
+      <ShapWaterfallChart
+        explanations={feature_explanations}
+        topN={12}
+        title="Feature Impact (SHAP Values)"
+      />
 
-      {/* Class probability distribution */}
+      {/* ── Global Feature Importance ── */}
+      {globalImportances && globalImportances.length > 0 && (
+        <GlobalFeatureImportance
+          importances={globalImportances}
+          initialShow={15}
+          title="Global Feature Importance"
+        />
+      )}
+
+      {/* ── Class probability distribution ── */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">All Class Probabilities</p>
-        <ProbabilityDistribution probabilities={classProbabilities} predictedBundle={predictedBundle} />
+        <ProbabilityDistribution probabilities={class_probabilities} predictedBundle={predicted_bundle} />
       </div>
     </motion.div>
   )

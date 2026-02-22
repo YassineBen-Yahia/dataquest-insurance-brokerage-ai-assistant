@@ -1,10 +1,14 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import auth, clients, dashboard, data
+from app.routers import auth, clients, dashboard, data, classification
+from app.ml_pipeline import classification_service
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -12,6 +16,14 @@ async def lifespan(app: FastAPI):
     # Create tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Load ML model
+    try:
+        classification_service.load()
+        logger.info("ML classification model loaded successfully.")
+    except Exception as exc:
+        logger.error("Failed to load ML model: %s", exc)
+
     yield
 
 
@@ -35,6 +47,7 @@ app.include_router(auth.router)
 app.include_router(clients.router)
 app.include_router(dashboard.router)
 app.include_router(data.router)
+app.include_router(classification.router)
 
 
 @app.get("/")

@@ -2,248 +2,194 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronDown, Sparkles } from 'lucide-react'
-import { CustomerProfile, SAMPLE_CUSTOMERS } from '@/lib/classification-data'
+import { Sparkles } from 'lucide-react'
+import { SinglePredictionInput, CATEGORICAL_OPTIONS, getDefaultSingleInput } from '@/lib/classification-data'
 
 interface CustomerInputFormProps {
-  onSubmit: (customer: CustomerProfile) => void
+  onSubmit: (input: SinglePredictionInput) => void
   isLoading?: boolean
 }
 
-const FIELD_SELECT = 'w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-foreground focus:border-primary outline-none transition-colors text-sm'
-const FIELD_INPUT  = 'w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-foreground placeholder-muted-foreground/50 focus:border-primary outline-none transition-colors text-sm'
+const FIELD_SELECT = 'w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none transition-colors text-sm'
+const FIELD_INPUT  = 'w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-foreground placeholder-muted-foreground/50 focus:border-primary outline-none transition-colors text-sm'
+const LABEL = 'block text-xs font-medium text-muted-foreground mb-1'
 
 export function CustomerInputForm({ onSubmit, isLoading }: CustomerInputFormProps) {
-  const [activeTab, setActiveTab] = useState<'sample' | 'custom'>('sample')
-  const [selectedId, setSelectedId] = useState<string>(SAMPLE_CUSTOMERS[0].id)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [form, setForm] = useState<Omit<CustomerProfile, 'id' | 'name'> & { name: string }>({
-    name: '',
-    age: 30,
-    gender: 'Male',
-    maritalStatus: 'Single',
-    annualIncome: 60000,
-    employmentStatus: 'Employed',
-    numDependents: 0,
-    educationLevel: "Bachelor's",
-    propertyOwnership: 'Renter',
-    vehicleType: 'Sedan',
-    priorClaimsCount: 0,
-    region: 'East',
-  })
+  const [form, setForm] = useState<SinglePredictionInput>(getDefaultSingleInput())
 
-  const selectedCustomer = SAMPLE_CUSTOMERS.find((c) => c.id === selectedId) ?? SAMPLE_CUSTOMERS[0]
-
-  const field = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+  const set = <K extends keyof SinglePredictionInput>(key: K, value: SinglePredictionInput[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const handleSampleSubmit = () => onSubmit(selectedCustomer)
-
-  const handleCustomSubmit = () => {
-    if (!form.name.trim()) return
-    onSubmit({
-      id: `custom-${Date.now()}`,
-      ...form,
-      age: Number(form.age),
-      annualIncome: Number(form.annualIncome),
-      numDependents: Number(form.numDependents),
-      priorClaimsCount: Number(form.priorClaimsCount),
-    })
-  }
+  const handleSubmit = () => onSubmit(form)
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.1 }}
-      className="h-full flex flex-col gap-5"
+      className="h-full flex flex-col gap-4"
     >
       {/* Header */}
       <div>
-        <h2 className="text-base font-semibold text-foreground">Customer Profile</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Enter demographic & behavioural features for bundle prediction</p>
+        <h2 className="text-base font-semibold text-foreground">Client Profile</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Enter policy & demographic features matching the training schema</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-3">
-        {(['sample', 'custom'] as const).map((tab) => (
+      {/* Scrollable form */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {/* Income */}
+        <div>
+          <label className={LABEL}>Estimated Annual Income ($)</label>
+          <input type="number" min={0} value={form.Estimated_Annual_Income} onChange={(e) => set('Estimated_Annual_Income', Number(e.target.value))} placeholder="e.g. 75000" className={FIELD_INPUT} />
+        </div>
+
+        {/* Employment Status */}
+        <div>
+          <label className={LABEL}>Employment Status</label>
+          <select value={form.Employment_Status} onChange={(e) => set('Employment_Status', e.target.value)} className={FIELD_SELECT}>
+            {CATEGORICAL_OPTIONS.Employment_Status.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
+          </select>
+        </div>
+
+        {/* Dependents row */}
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <label className={LABEL}>Adult Dep.</label>
+            <input type="number" min={0} max={10} value={form.Adult_Dependents} onChange={(e) => set('Adult_Dependents', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Child Dep.</label>
+            <input type="number" min={0} max={10} value={form.Child_Dependents ?? 0} onChange={(e) => set('Child_Dependents', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Infant Dep.</label>
+            <input type="number" min={0} max={10} value={form.Infant_Dependents} onChange={(e) => set('Infant_Dependents', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+        </div>
+
+        {/* Region + Broker Agency */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Region Code</label>
+            <select value={form.Region_Code} onChange={(e) => set('Region_Code', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Region_Code.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Broker Agency</label>
+            <select value={form.Broker_Agency_Type} onChange={(e) => set('Broker_Agency_Type', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Broker_Agency_Type.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Vehicles + Riders */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Vehicles on Policy</label>
+            <input type="number" min={0} max={10} value={form.Vehicles_on_Policy} onChange={(e) => set('Vehicles_on_Policy', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Custom Riders</label>
+            <input type="number" min={0} max={10} value={form.Custom_Riders_Requested} onChange={(e) => set('Custom_Riders_Requested', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+        </div>
+
+        {/* Deductible + Acquisition */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Deductible Tier</label>
+            <select value={form.Deductible_Tier} onChange={(e) => set('Deductible_Tier', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Deductible_Tier.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Acquisition Channel</label>
+            <select value={form.Acquisition_Channel} onChange={(e) => set('Acquisition_Channel', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Acquisition_Channel.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Payment + Month */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Payment Schedule</label>
+            <select value={form.Payment_Schedule} onChange={(e) => set('Payment_Schedule', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Payment_Schedule.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Policy Start Month</label>
+            <select value={form.Policy_Start_Month} onChange={(e) => set('Policy_Start_Month', e.target.value)} className={FIELD_SELECT}>
+              {CATEGORICAL_OPTIONS.Policy_Start_Month.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Claims + Years Without Claims */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Previous Claims</label>
+            <input type="number" min={0} max={20} value={form.Previous_Claims_Filed} onChange={(e) => set('Previous_Claims_Filed', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Yrs Without Claims</label>
+            <input type="number" min={0} max={30} value={form.Years_Without_Claims} onChange={(e) => set('Years_Without_Claims', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+        </div>
+
+        {/* Policy Duration + Days Since Quote */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={LABEL}>Prev. Policy (months)</label>
+            <input type="number" min={0} value={form.Previous_Policy_Duration_Months} onChange={(e) => set('Previous_Policy_Duration_Months', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Days Since Quote</label>
+            <input type="number" min={0} value={form.Days_Since_Quote} onChange={(e) => set('Days_Since_Quote', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+        </div>
+
+        {/* Grace + Amendments + Underwriting */}
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <label className={LABEL}>Grace Ext.</label>
+            <input type="number" min={0} max={10} value={form.Grace_Period_Extensions} onChange={(e) => set('Grace_Period_Extensions', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Amendments</label>
+            <input type="number" min={0} max={10} value={form.Policy_Amendments_Count} onChange={(e) => set('Policy_Amendments_Count', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>UW Days</label>
+            <input type="number" min={0} value={form.Underwriting_Processing_Days} onChange={(e) => set('Underwriting_Processing_Days', Number(e.target.value))} className={FIELD_INPUT} />
+          </div>
+        </div>
+
+        {/* Existing Policyholder toggle */}
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-medium text-muted-foreground">Existing Policyholder</label>
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all ${
-              activeTab === tab
-                ? 'bg-primary/10 border border-primary/20 text-primary'
-                : 'bg-muted/50 border border-border text-muted-foreground hover:text-foreground'
-            }`}
+            type="button"
+            onClick={() => set('Existing_Policyholder', form.Existing_Policyholder === 1 ? 0 : 1)}
+            className={`w-10 h-5 rounded-full transition-colors relative ${form.Existing_Policyholder === 1 ? 'bg-primary' : 'bg-muted'}`}
           >
-            {tab === 'sample' ? 'Sample Customer' : 'New Customer'}
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.Existing_Policyholder === 1 ? 'translate-x-5' : 'translate-x-0.5'}`} />
           </button>
-        ))}
+          <span className="text-xs text-muted-foreground">{form.Existing_Policyholder === 1 ? 'Yes' : 'No'}</span>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto space-y-4">
-        {activeTab === 'sample' ? (
-          <motion.div key="sample" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            {/* Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="w-full bg-muted/50 border border-border hover:border-primary/50 rounded-lg px-4 py-3 text-left text-foreground flex items-center justify-between transition-colors"
-              >
-                <span className="font-medium">{selectedCustomer.name}</span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" style={{ transform: showDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-              </button>
-              {showDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg overflow-hidden z-10 shadow-lg"
-                >
-                  {SAMPLE_CUSTOMERS.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => { setSelectedId(c.id); setShowDropdown(false) }}
-                      className="w-full text-left px-4 py-3 hover:bg-muted transition-colors border-b border-border last:border-0"
-                    >
-                      <p className="font-medium text-foreground text-sm">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Age {c.age} · {c.employmentStatus} · ${c.annualIncome.toLocaleString()}/yr</p>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </div>
-
-            {/* Details card */}
-            <div className="bg-muted/30 border border-border rounded-lg p-4 mt-4 space-y-2 text-sm">
-              {[
-                ['Age', selectedCustomer.age],
-                ['Gender', selectedCustomer.gender],
-                ['Marital Status', selectedCustomer.maritalStatus],
-                ['Annual Income', `$${selectedCustomer.annualIncome.toLocaleString()}`],
-                ['Employment', selectedCustomer.employmentStatus],
-                ['Dependents', selectedCustomer.numDependents],
-                ['Education', selectedCustomer.educationLevel],
-                ['Property', selectedCustomer.propertyOwnership],
-                ['Vehicle', selectedCustomer.vehicleType],
-                ['Prior Claims', selectedCustomer.priorClaimsCount],
-                ['Region', selectedCustomer.region],
-              ].map(([label, value]) => (
-                <div key={String(label)} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{label}</span>
-                  <span className="font-medium text-foreground">{String(value)}</span>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={handleSampleSubmit}
-              disabled={isLoading}
-              className="w-full mt-5 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all shadow-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              {isLoading ? 'Classifying…' : 'Predict Bundle'}
-            </button>
-          </motion.div>
-        ) : (
-          <motion.div key="custom" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {/* Name */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Full Name *</label>
-              <input type="text" value={form.name} onChange={(e) => field('name', e.target.value)} placeholder="Enter customer name" className={FIELD_INPUT} />
-            </div>
-
-            {/* Age + Gender */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Age</label>
-                <input type="number" min={18} max={90} value={form.age} onChange={(e) => field('age', Number(e.target.value))} className={FIELD_INPUT} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Gender</label>
-                <select value={form.gender} onChange={(e) => field('gender', e.target.value as CustomerProfile['gender'])} className={FIELD_SELECT}>
-                  <option>Male</option><option>Female</option><option>Other</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Marital Status */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Marital Status</label>
-              <select value={form.maritalStatus} onChange={(e) => field('maritalStatus', e.target.value as CustomerProfile['maritalStatus'])} className={FIELD_SELECT}>
-                <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
-              </select>
-            </div>
-
-            {/* Annual Income */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Annual Income ($)</label>
-              <input type="number" min={0} value={form.annualIncome} onChange={(e) => field('annualIncome', Number(e.target.value))} placeholder="e.g. 75000" className={FIELD_INPUT} />
-            </div>
-
-            {/* Employment */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Employment Status</label>
-              <select value={form.employmentStatus} onChange={(e) => field('employmentStatus', e.target.value as CustomerProfile['employmentStatus'])} className={FIELD_SELECT}>
-                <option>Employed</option><option>Self-Employed</option><option>Unemployed</option><option>Retired</option>
-              </select>
-            </div>
-
-            {/* Dependents */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Number of Dependents</label>
-              <input type="number" min={0} max={10} value={form.numDependents} onChange={(e) => field('numDependents', Number(e.target.value))} className={FIELD_INPUT} />
-            </div>
-
-            {/* Education */}
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Education Level</label>
-              <select value={form.educationLevel} onChange={(e) => field('educationLevel', e.target.value as CustomerProfile['educationLevel'])} className={FIELD_SELECT}>
-                <option>High School</option><option>{"Bachelor's"}</option><option>{"Master's"}</option><option>PhD</option>
-              </select>
-            </div>
-
-            {/* Property + Vehicle */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Property</label>
-                <select value={form.propertyOwnership} onChange={(e) => field('propertyOwnership', e.target.value as CustomerProfile['propertyOwnership'])} className={FIELD_SELECT}>
-                  <option>Renter</option><option>Homeowner</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Vehicle</label>
-                <select value={form.vehicleType} onChange={(e) => field('vehicleType', e.target.value as CustomerProfile['vehicleType'])} className={FIELD_SELECT}>
-                  <option>None</option><option>Sedan</option><option>SUV</option><option>Truck</option><option>Luxury</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Prior Claims + Region */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Prior Claims</label>
-                <input type="number" min={0} max={10} value={form.priorClaimsCount} onChange={(e) => field('priorClaimsCount', Number(e.target.value))} className={FIELD_INPUT} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Region</label>
-                <select value={form.region} onChange={(e) => field('region', e.target.value as CustomerProfile['region'])} className={FIELD_SELECT}>
-                  <option>North</option><option>South</option><option>East</option><option>West</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              onClick={handleCustomSubmit}
-              disabled={isLoading || !form.name.trim()}
-              className="w-full mt-3 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all shadow-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              {isLoading ? 'Classifying…' : 'Predict Bundle'}
-            </button>
-          </motion.div>
-        )}
-      </div>
+      {/* Submit button */}
+      <button
+        onClick={handleSubmit}
+        disabled={isLoading}
+        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all shadow-sm"
+      >
+        <Sparkles className="w-4 h-4" />
+        {isLoading ? 'Running ML Pipeline…' : 'Predict Bundle'}
+      </button>
     </motion.div>
   )
 }

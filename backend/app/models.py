@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Float, Boolean, Enum as SAEnum, Text
 from app.database import Base
 import enum
 
@@ -10,7 +10,7 @@ class UserRole(str, enum.Enum):
 
 
 class User(Base):
-    __tablename__ = "users"
+    _tablename_ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
@@ -22,7 +22,7 @@ class User(Base):
 
 # ──────────────────────────── Client Model (train.csv) ───────────────
 class Client(Base):
-    __tablename__ = "clients"
+    _tablename_ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, unique=True, index=True)  # USR_000000
@@ -54,3 +54,12 @@ class Client(Base):
     days_since_quote = Column(Integer, nullable=True)
     policy_start_month = Column(String, nullable=True)
     purchased_coverage_bundle = Column(String, nullable=True)
+
+
+# ──────────────────────────── Bundle Policy Model ────────────────────
+class BundlePolicy(Base):
+    _tablename_ = "bundle_policies"
+
+    id = Column(Integer, primary_key=True, index=True)  # 0-9
+    bundle_name = Column(String, unique=True, nullable=False)
+    description = Column(Text, nullable=False)

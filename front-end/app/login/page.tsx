@@ -44,7 +44,7 @@ export default function LoginPage() {
                         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                             <span className="text-primary-foreground font-bold text-sm">AI</span>
                         </div>
-                        <span className="font-semibold text-foreground text-xl">Marcos AI</span>
+                        <span className="font-semibold text-foreground text-xl">OLAI</span>
                     </Link>
                     <h1 className="text-3xl font-bold text-foreground mb-3">Welcome back</h1>
                     <p className="text-muted-foreground">Sign in to your broker account</p>
