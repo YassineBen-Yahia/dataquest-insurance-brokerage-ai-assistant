@@ -1,19 +1,25 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
+import { apiFetch } from '@/lib/api'
 
-const data = [
-  { name: 'Business Liability', value: 28 },
-  { name: 'Property', value: 22 },
-  { name: 'Workers Comp', value: 31 },
-  { name: 'Auto', value: 19 },
-]
-
-const COLORS = ['var(--primary)', 'var(--accent)', '#10b981', '#f59e0b']
+const COLORS = ['var(--primary)', 'var(--accent)', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1']
 
 export function PolicyBreakdown() {
+  const [data, setData] = useState<{ name: string; value: number }[]>([])
+
+  useEffect(() => {
+    apiFetch('/api/dashboard/stats')
+      .then(stats => {
+        const bundleData = Object.entries(stats.bundle_distribution || {})
+          .map(([name, value]) => ({ name, value: value as number }))
+          .sort((a, b) => b.value - a.value)
+        setData(bundleData)
+      })
+      .catch(() => {})
+  }, [])
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -22,8 +28,8 @@ export function PolicyBreakdown() {
       className="bg-card backdrop-blur-sm rounded-lg border border-border p-6"
     >
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Policy Breakdown</h3>
-        <p className="text-sm text-muted-foreground mt-1">Distribution by type</p>
+        <h3 className="text-lg font-semibold text-foreground">Bundle Distribution</h3>
+        <p className="text-sm text-muted-foreground mt-1">Coverage bundle breakdown</p>
       </div>
 
       <ResponsiveContainer width="100%" height={250}>
