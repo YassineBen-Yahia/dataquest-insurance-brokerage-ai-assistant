@@ -34,7 +34,7 @@ export function Navbar() {
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:shadow-blue-500/50 transition-all">
             <span className="text-white font-bold text-sm">AI</span>
           </div>
-          <span className="font-bold text-foreground text-lg hidden sm:inline">Marcos AI</span>
+          <span className="font-bold text-foreground text-lg hidden sm:inline">OLAI</span>
         </Link>
 
         {/* Center Navigation */}

@@ -6,8 +6,14 @@ import { FileText, Loader2 } from 'lucide-react'
 import { containerVariants, itemVariants } from '@/lib/animations'
 import { apiFetch } from '@/lib/api'
 
+interface Policy {
+  id: number
+  bundle_name: string
+  description: string
+}
+
 export default function PoliciesPage() {
-  const [policies, setPolicies] = useState<any[]>([])
+  const [policies, setPolicies] = useState<Policy[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -32,7 +38,7 @@ export default function PoliciesPage() {
     >
       <motion.div variants={itemVariants}>
         <h1 className="text-3xl font-bold text-foreground">Policies</h1>
-        <p className="text-muted-foreground mt-2">View and manage all active policies and their details.</p>
+        <p className="text-muted-foreground mt-2">Coverage bundles available for classification.</p>
       </motion.div>
 
       <motion.div variants={itemVariants} className="bg-card border border-border rounded-xl p-6 shadow-sm overflow-hidden">
@@ -43,37 +49,22 @@ export default function PoliciesPage() {
           </div>
         ) : error ? (
           <div className="text-red-500 py-12 text-center">Failed to load: {error}</div>
-        ) : policies.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No policies found.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left whitespace-nowrap">
+            <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Policy ID</th>
-                  <th className="px-6 py-4 font-semibold">Name</th>
-                  <th className="px-6 py-4 font-semibold">Category</th>
-                  <th className="px-6 py-4 font-semibold">Target Customer</th>
-                  <th className="px-6 py-4 font-semibold">Base Premium (TND)</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold w-12">ID</th>
+                  <th className="px-6 py-4 font-semibold">Bundle Name</th>
+                  <th className="px-6 py-4 font-semibold">Description</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {policies.map((policy, idx) => (
-                  <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                    <td className="px-6 py-4">{policy.policy_id}</td>
-                    <td className="px-6 py-4 font-medium text-foreground truncate max-w-[200px]" title={policy.policy_name}>
-                      {policy.policy_name}
-                    </td>
-                    <td className="px-6 py-4">{policy.policy_category}</td>
-                    <td className="px-6 py-4">{policy.target_customer}</td>
-                    <td className="px-6 py-4 font-medium">{policy.base_premium_tnd} TND</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${policy.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted/30 text-muted-foreground'
-                        }`}>
-                        {policy.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
+                {policies.map(p => (
+                  <tr key={p.id} className="hover:bg-muted/10 transition-colors">
+                    <td className="px-6 py-4 text-muted-foreground">{p.id}</td>
+                    <td className="px-6 py-4 font-medium text-foreground whitespace-nowrap">{p.bundle_name}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{p.description}</td>
                   </tr>
                 ))}
               </tbody>

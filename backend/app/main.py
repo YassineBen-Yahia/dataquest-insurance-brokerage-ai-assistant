@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import auth, clients, dashboard, data, classification
+from app.routers import auth, clients, dashboard, data, classification, policies
 from app.ml_pipeline import classification_service
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ app.include_router(clients.router)
 app.include_router(dashboard.router)
 app.include_router(data.router)
 app.include_router(classification.router)
+app.include_router(policies.router)
 
 
 @app.get("/")

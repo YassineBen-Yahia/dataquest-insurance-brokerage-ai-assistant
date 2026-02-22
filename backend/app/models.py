@@ -10,7 +10,7 @@ class UserRole(str, enum.Enum):
 
 
 class User(Base):
-    _tablename_ = "users"
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
@@ -22,7 +22,7 @@ class User(Base):
 
 # ──────────────────────────── Client Model (train.csv) ───────────────
 class Client(Base):
-    _tablename_ = "clients"
+    __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, unique=True, index=True)  # USR_000000
@@ -58,7 +58,7 @@ class Client(Base):
 
 # ──────────────────────────── Bundle Policy Model ────────────────────
 class BundlePolicy(Base):
-    _tablename_ = "bundle_policies"
+    __tablename__ = "bundle_policies"
 
     id = Column(Integer, primary_key=True, index=True)  # 0-9
     bundle_name = Column(String, unique=True, nullable=False)
